@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OBS Auto Audio Sync</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: transparent; color: white; margin-top: 50px; }
+        #trackName { font-size: 18px; font-weight: bold; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<div id="trackName">Waiting for server...</div>
+<audio id="audioPlayer"></audio>
+
+<script>
+    const audioPlayer = document.getElementById('audioPlayer');
+    const trackNameDiv = document.getElementById('trackName');
+    
+    let activeTrack = ""; // Tracks what is currently loaded
+
+    function checkForNewAudio() {
+        const baseUri = window.location.origin;
+        // Fetch the data from the custom Python API
+        fetch(`${baseUri}/current-track`)
+            .then(response => response.json())
+            .then(data => {
+                const latestTrack = data.filename;
+
+                if (latestTrack !== activeTrack) {
+                    console.log(`New track detected: ${latestTrack}`);
+                    activeTrack = latestTrack;
+                    
+                    // Update text on screen for OBS overlay
+                    const cleanName = latestTrack.replace('external-audio/', '');
+                    trackNameDiv.innerText = `Now Playing: ${cleanName}`;
+
+                    // Update audio element and force playback
+                    audioPlayer.src = `${baseUri}/${latestTrack}`;
+                    audioPlayer.load();
+                    audioPlayer.play()
+                        .catch(err => console.log("Autoplay waiting for OBS interaction/source reload."));
+                }
+            })
+            .catch(err => console.error("Error connecting to server:", err));
+    }
+
+    // Check for updates every 3000 milliseconds (3 seconds)
+    setInterval(checkForNewAudio, 3000);
+
+    // Initial check when page loads
+    checkForNewAudio();
+</script>
+
+</body>
+</html>
